@@ -8,8 +8,12 @@ var stylus = require('stylus');
 
 var index = require('./routes/index');
 var users = require('./routes/users');
+var login = require('./routes/login')
+var flash = require('connect-flash');
 
 var app = express();
+var passport = require('passport')
+var session = require('express-session')
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -24,8 +28,32 @@ app.use(cookieParser());
 app.use(stylus.middleware(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(session({ secret: "roomapplication session" }));
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(flash());
 app.use('/', index);
 app.use('/users', users);
+app.use('/login', login);
+
+app.post('/login',
+  passport.authenticate('local', { successRedirect: '/',
+                                   failureRedirect: '/login',
+                                   failureFlash: true })
+);
+
+var LocalStrategy = require('passport-local').Strategy;
+
+passport.use(new LocalStrategy(
+  function(username, password, done) {
+  	if(username=='admin' && password=='admin') {
+		return done(null, "user")
+  	} else {
+  		return done(null, false, {message: 'Login failed..'});
+  	}
+  }
+));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -44,5 +72,10 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+//code for importing static files
+app.use(express.static(path.join(__dirname, 'public')));
+var currentPort = app.listen(process.env.PORT || 3000);
+console.log("Server started at PORT " + currentPort);
 
 module.exports = app;
