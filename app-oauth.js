@@ -12,6 +12,7 @@ var login = require('./routes/login')
 var flash = require('connect-flash');
 
 var app = express();
+
 var passport = require('passport')
 var session = require('express-session')
 
@@ -35,25 +36,28 @@ app.use(passport.session());
 app.use(flash());
 app.use('/', index);
 app.use('/users', users);
-app.use('/login', login);
 
-app.post('/login',
-  passport.authenticate('local', { successRedirect: '/',
-                                   failureRedirect: '/login',
-                                   failureFlash: true })
-);
 
-var LocalStrategy = require('passport-local').Strategy;
+var OAuth2Strategy = require('passport-oauth').OAuth2Strategy;
 
-passport.use(new LocalStrategy(
-  function(username, password, done) {
-  	if(username=='admin' && password=='admin') {
-		return done(null, "user")
-  	} else {
-  		return done(null, false, req.flash('message','Login failed..'));
-  	}
+passport.use('provider', new OAuth2Strategy({
+    authorizationURL: 'https://5c63f71b-e5eb-45cb-bc87-83de9faec49c.predix-uaa.run.aws-usw02-pr.ice.predix.io/oauth2/authorize',
+    tokenURL: 'https://5c63f71b-e5eb-45cb-bc87-83de9faec49c.predix-uaa.run.aws-usw02-pr.ice.predix.io/oauth2/token',
+    clientID: 'node-sso-demo',
+    clientSecret: 'node-sso-demo',
+    callbackURL: 'https://node-sso-demo.run.aws-usw02-pr.ice.predix.io/users'
+  },
+  function(accessToken, refreshToken, profile, done) {
+    //User.findOrCreate(..., function(err, user) {
+      done(err, "user");
+    //});
   }
 ));
+
+app.get('/login', passport.authenticate('provider'));
+app.get('/users',
+  passport.authenticate('provider', { successRedirect: '/users',
+                                      failureRedirect: '/login' }));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
